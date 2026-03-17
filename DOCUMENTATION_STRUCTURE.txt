@@ -1,0 +1,184 @@
+================================================================================
+  REORGANIZACION DE DOCUMENTACION - COMTRADE PRO
+================================================================================
+
+Fecha: Marzo 2026
+Descripcion: Movimiento de documentacion del root a carpeta docs/
+
+CAMBIOS REALIZADOS:
+================================================================================
+
+1. DOCUMENTACION MOVIDA A docs/
+   ====================================================================================
+   
+   Los siguientes archivos permanecen en docs/ como referencia tecnica:
+   
+   ✓ docs/ARCHITECTURE.md          - Diseño y arquitectura de 3 capas
+   ✓ docs/PROJECT_SUMMARY.md       - Resumen de proyecto y checklist
+   ✓ docs/QUICKSTART.md            - Guía paso a paso de inicio rápido
+   ✓ docs/VISUAL_GUIDE.md          - Diagramas y flujos visuales
+   ✓ docs/MIGRATION.md             - Notas de migración y cambios
+   ✓ docs/README.md (NUEVO)        - Índice de documentación (actualizado)
+   ✓ docs/ARCHITECTURE_DETAILED.md (NUEVO) - Documentación técnica completa
+   
+   NOTA: Los archivos ARCHITECTURE.md, QUICKSTART.md, etc. en ROOT se mantendrán
+         por compatibilidad con proyectos existentes, pero refs apuntan a docs/
+
+2. NUEVO README EN ROOT
+   ====================================================================================
+   
+   ✓ README.md (REESCRITO)
+     - Simplificado y enfocado en usuarios finales
+     - Instrucciones claras de ejecución (3 opciones)
+     - Estructura del proyecto
+     - Links a documentación detallada en docs/
+
+3. NUEVOS ARCHIVOS DE EJECUCION Y BUILD
+   ====================================================================================
+   
+   ✓ run_all_options.bat (NUEVO, completo)
+     - Menú interactivo con 9 opciones
+     - Op. 1: Ejecutar aplicación normal (Desktop + Dashboard)
+     - Op. 2: Dashboard Dash solo (porto 8050)
+     - Op. 3: PyQt6 Desktop solo
+     - Op. 4: Validar importaciones
+     - Op. 5: Ejecutar tests de análisis
+     - Op. 6: Limpiar cache y temporales
+     - Op. 7: Instalar dependencias
+     - Op. 8: Compilar ejecutable
+     - Op. 9: Abrir carpeta del proyecto
+   
+   ✓ ComtradeReaderCalc.bat (NUEVO, simple)
+     - Launcher directo que ejecuta ComtradeReaderCalc.exe
+     - Si no existe, ofrece compilarlo o usar alternativas
+   
+   ✓ build_executable.py (NUEVO)
+     - Script Python para compilar ejecutable con PyInstaller
+     - Genera ComtradeReaderCalc.exe en la raíz
+     - Partes de limpieza automática
+     - Fallback si no encuentra .ico
+   
+   ✓ requirements-dev.txt (NUEVO)
+     - Dependencias para desarrollo (incluye PyInstaller)
+     - Herramientas adicionales (pytest, black, pylint, etc)
+
+4. ESTRUCTURA FINAL
+   ====================================================================================
+   
+   ComtradeReaderCalc/
+   │
+   ├── README.md                        [Guía principal - REESCRITO]
+   ├── ComtradeReaderCalc.bat           [Launcher simple - NUEVO]
+   ├── run_all_options.bat              [Menú interactivo - NUEVO]
+   ├── build_executable.py              [Build script - NUEVO]
+   ├── requirements.txt                 [Dependencias base]
+   ├── requirements-dev.txt             [Dependencias dev - NUEVO]
+   │
+   ├── docs/                            [Documentación técnica]
+   │   ├── README.md                    [Índice - ACTUALIZADO]
+   │   ├── ARCHITECTURE.md              [Documentación técnica]
+   │   ├── ARCHITECTURE_DETAILED.md     [Detalles amplios - NUEVO]
+   │   ├── PROJECT_SUMMARY.md           [Resumen proyecto]
+   │   ├── QUICKSTART.md                [Guía rápida]
+   │   ├── VISUAL_GUIDE.md              [Diagramas]
+   │   └── MIGRATION.md                 [Notas migración]
+   │
+   ├── src/                             [Código fuente]
+   │   ├── main.py                      [Punto de entrada]
+   │   ├── core/                        [Módulos de análisis]
+   │   ├── gui/                         [Interfaz PyQt6]
+   │   └── utils/                       [Utilidades]
+   │
+   ├── data/                            [Datos de ejemplo]
+   ├── tests/                           [Tests unitarios]
+   ├── docs/                            [Documentación]
+   └── [otros directorios]
+
+5. COMO EJECUTAR
+   ====================================================================================
+   
+   OPCION 1 - Doble clic a ComtradeReaderCalc.bat
+   $ ComtradeReaderCalc.bat
+   → Ejecuta .exe si existe, sino ofrece compilar
+   
+   OPCION 2 - Menú interactivo completo
+   $ run_all_options.bat
+   → Menú con 9 opciones (ejecutar, tests, build, etc)
+   
+   OPCION 3 - Python directo (sin .exe)
+   $ python src\main.py
+   → Requiere Python 3.9+ y dependencias instaladas
+   
+   OPCION 4 - Compilar ejecutable
+   $ python build_executable.py
+   → Genera ComtradeReaderCalc.exe con PyInstaller
+   → Requiere: pip install -r requirements-dev.txt
+
+ACTUALIZACIÓN DE CONTENIDOS:
+==============================================================================
+
+ANTES (Root desordenado):
+  ├── README.md (largo, técnico)
+  ├── ARCHITECTURE.md
+  ├── QUICKSTART.md
+  ├── PROJECT_SUMMARY.md
+  ├── VISUAL_GUIDE.md
+  ├── MIGRATION.md
+  ├── run.bat (simple)
+  └── run_dashboard.bat (old)
+
+AHORA (Root limpio, docs organizado):
+  ├── README.md (enfocado usuarios)
+  ├── ComtradeReaderCalc.bat (launcher simple)
+  ├── run_all_options.bat (menú completo - 9 opciones)
+  ├── build_executable.py (compilación)
+  ├── requirements-dev.txt (dev tools)
+  └── docs/
+      ├── README.md (índice técnico)
+      ├── ARCHITECTURE.md
+      ├── ARCHITECTURE_DETAILED.md (nuevo)
+      ├── QUICKSTART.md
+      ├── PROJECT_SUMMARY.md
+      ├── VISUAL_GUIDE.md
+      └── MIGRATION.md
+
+NOTAS IMPORTANTES:
+==============================================================================
+
+✓ Los archivos .md en root (ARCHITECTURE.md, etc) aún existen por 
+  compatibilidad e histórico, pero la documentación principal está en docs/
+
+✓ El nuevo README.md en root está optimizado para usuarios finales,
+  con 3 opciones claras de ejecución
+
+✓ run_all_options.bat proporciona menú completo con 9 opciones para:
+  - Ejecutar versiones alternativas (solo web, solo desktop)
+  - Tests de validación  
+  - Gestión de dependencias
+  - Compilación de .exe
+  - Limpieza de cache
+
+✓ build_executable.py es automático y genera ComtradeReaderCalc.exe
+  en la raís, distribuidle sin Python
+
+✓ requirements-dev.txt contiene todas las tools para desarrollo,
+  incluido PyInstaller para compilación
+
+PROXIMOS PASOS (Opcional):
+==============================================================================
+
+1. Eliminar archivos .md viejos del root si no se necesitan:
+   rm ARCHITECTURE.md QUICKSTART.md PROJECT_SUMMARY.md VISUAL_GUIDE.md MIGRATION.md
+
+2. Actualizar .gitignore para ignorar dist/, build/, __pycache__
+
+3. Considerar un step-by-step en README para novatos:
+   - Descargar proyecto
+   - Opción A: Doble-clic ComtradeReaderCalc.bat
+   - Opción B: Ejecutar python src/main.py
+   - Opción C: Leer docs/QUICKSTART.md
+
+================================================================================
+Documento Generado: Marzo 2026
+Versión: 2.1
+================================================================================

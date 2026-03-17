@@ -1,0 +1,36 @@
+# COMTRADE Pro - Requirements
+# ========================================
+# Python dependencies for the COMTRADE analysis application
+
+# GUI Framework
+PyQt6>=6.6.0
+PyQt6-WebEngine>=6.6.0
+
+# Scientific Computing
+numpy>=1.24.0
+scipy>=1.11.0
+pandas>=2.0.0
+
+# Plotting
+matplotlib>=3.7.0
+
+# ─── Dash Web Dashboard ───────────────────────────────
+dash>=2.16.0
+dash-bootstrap-components>=1.5.0
+plotly>=5.18.0
+colorama>=0.4.6
+
+# PDF Generation (used by matplotlib for PDF export)
+# Already included with matplotlib backend dependencies
+
+# Optional: For better numerical performance
+# numba>=0.57.0
+
+# Development and Testing Dependencies (optional)
+# pytest>=7.4.0
+# pytest-qt>=4.2.0
+# black>=23.0.0
+# pylint>=2.17.0
+
+# For packaging with PyInstaller
+# pyinstaller>=5.13.0

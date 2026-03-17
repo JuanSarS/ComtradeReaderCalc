@@ -15,19 +15,30 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM Check if virtual environment exists
-if not exist "venv\Scripts\activate.bat" (
-    echo Virtual environment not found. Creating one...
-    python -m venv venv
-    call venv\Scripts\activate.bat
-    echo Installing dependencies...
-    pip install -r requirements.txt
+set "PYTHON_EXE="
+
+REM Prefer .venv (project standard), fallback to venv if present
+if exist ".venv\Scripts\python.exe" (
+    set "PYTHON_EXE=.venv\Scripts\python.exe"
+) else if exist "venv\Scripts\python.exe" (
+    set "PYTHON_EXE=venv\Scripts\python.exe"
 ) else (
-    call venv\Scripts\activate.bat
+    echo No virtual environment found. Creating .venv...
+    python -m venv .venv
+    set "PYTHON_EXE=.venv\Scripts\python.exe"
+    echo Installing dependencies...
+    "%PYTHON_EXE%" -m pip install -r requirements.txt
+)
+
+REM Ensure required GUI modules are available in selected environment
+"%PYTHON_EXE%" -c "from PyQt6.QtWebEngineWidgets import QWebEngineView" >nul 2>&1
+if errorlevel 1 (
+    echo Installing/updating dependencies in selected environment...
+    "%PYTHON_EXE%" -m pip install -r requirements.txt
 )
 
 REM Launch the application
 echo Launching application...
-python src\main.py
+"%PYTHON_EXE%" src\main.py
 
 pause

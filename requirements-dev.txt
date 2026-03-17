@@ -1,0 +1,24 @@
+# Development Dependencies for COMTRADE Pro
+# =========================================
+# These packages are needed for building the executable and development tasks
+
+# Include base requirements
+-r requirements.txt
+
+# Executable Packaging
+PyInstaller>=6.0.0
+
+# Development Tools
+pytest>=7.4.0
+pytest-qt>=4.2.0
+black>=23.0.0
+pylint>=2.17.0
+mypy>=1.0.0
+
+# Build Systems
+wheel>=0.41.0
+setuptools>=68.0.0
+
+# Documentation
+sphinx>=7.0.0
+sphinx-rtd-theme>=1.3.0

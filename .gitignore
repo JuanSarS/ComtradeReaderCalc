@@ -57,3 +57,17 @@ htmlcov/
 
 # OS
 Thumbs.db
+
+# Mock Up / Legacy UI Assets
+Front/
+
+# Legacy folders no longer used by current entry point
+core_engine/
+desktop_app/
+web_ui/
+dash_app/
+run_dashboard.bat
+
+# Migration and validation scripts
+migrate.py
+validate_structure.py

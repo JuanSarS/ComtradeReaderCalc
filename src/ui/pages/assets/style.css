@@ -1,0 +1,409 @@
+/* =============================================
+   COMTRADE Pro — Dark Scientific Dashboard
+   ============================================= */
+
+/* ── Reset & Base ─────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+  background: #0d1117;
+  color: #e0e0e0;
+  overflow: hidden;
+  height: 100vh;
+}
+
+/* ── Root layout ──────────────────────────── */
+.app-root {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── Sidebar ──────────────────────────────── */
+.sidebar {
+  width: 240px;
+  min-width: 240px;
+  background: #161b22;
+  border-right: 1px solid rgba(255,255,255,0.07);
+  display: flex;
+  flex-direction: column;
+  padding: 0 0 16px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 16px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+
+.brand-icon {
+  font-size: 24px;
+  color: #4B9EFF;
+  background: rgba(75,158,255,0.12);
+  border-radius: 8px;
+  width: 38px; height: 38px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.brand-title { font-size: 15px; font-weight: 700; color: #fff; line-height: 1.2; }
+.brand-sub   { font-size: 10px; color: #666; letter-spacing: 0.02em; }
+
+/* Upload button */
+.upload-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 14px 12px 8px;
+  padding: 10px 16px;
+  background: rgba(75,158,255,0.15);
+  border: 1px solid rgba(75,158,255,0.4);
+  border-radius: 8px;
+  color: #4B9EFF;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  text-align: center;
+}
+.upload-btn:hover {
+  background: rgba(75,158,255,0.25);
+  border-color: #4B9EFF;
+}
+
+.file-indicator { padding: 4px 12px 8px; font-size: 12px; }
+.file-indicator-content { display: flex; flex-direction: column; gap: 2px; }
+
+.sidebar-divider {
+  border: none;
+  border-top: 1px solid rgba(255,255,255,0.07);
+  margin: 6px 0;
+}
+
+/* Nav items */
+.sidebar-nav { display: flex; flex-direction: column; gap: 2px; padding: 4px 8px; }
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: #888;
+  font-size: 13px;
+  font-weight: 400;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: background 0.15s, color 0.15s;
+}
+.nav-item:hover { background: rgba(255,255,255,0.06); color: #e0e0e0; }
+.nav-item.active { background: rgba(75,158,255,0.15); color: #4B9EFF; font-weight: 500; }
+
+.nav-icon  { font-size: 15px; width: 20px; text-align: center; flex-shrink: 0; }
+.nav-label { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ── Main content ─────────────────────────── */
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Top bar */
+.top-bar {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  padding: 8px 16px;
+  background: #161b22;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  flex-shrink: 0;
+}
+.tb-label { font-size: 9px; color: #555; text-transform: uppercase; letter-spacing: 0.05em; }
+.tb-value { font-size: 12px; font-weight: 600; margin-top: 1px; }
+.accent-green  { color: #00FF88 !important; }
+.accent-blue   { color: #4B9EFF !important; }
+.accent-red    { color: #FF4B4B !important; }
+.accent-purple { color: #CC44FF !important; }
+
+/* Page content area */
+.page-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 20px 24px;
+}
+
+/* ── Page headers ─────────────────────────── */
+.page-header { margin-bottom: 16px; }
+.page-title  { font-size: 22px; font-weight: 700; color: #fff; }
+.page-subtitle { font-size: 12px; color: #666; margin-top: 3px; }
+
+/* ── Toolbar ──────────────────────────────── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.toolbar-right { display: flex; gap: 8px; }
+
+/* ── Tab toggle (radio pill buttons) ─────── */
+.tab-toggle { display: flex; gap: 4px; flex-wrap: wrap; }
+.tab-toggle-input { display: none; }
+.tab-toggle-label {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #888;
+  background: transparent;
+  transition: all 0.15s;
+  user-select: none;
+}
+.tab-toggle-label.active,
+input[type=radio]:checked + .tab-toggle-label {
+  background: #1a2332;
+  border-color: #4B9EFF;
+  color: #fff;
+}
+
+/* ── Generic card ─────────────────────────── */
+.card {
+  background: #161b22;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.card-title { font-size: 12px; font-weight: 600; color: #e0e0e0; margin-bottom: 6px; }
+
+/* ── Buttons ──────────────────────────────── */
+.btn-secondary {
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.04);
+  color: #e0e0e0;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-secondary:hover { background: rgba(255,255,255,0.09); }
+
+/* ── Stat row ─────────────────────────────── */
+.stat-row { display: flex; gap: 14px; margin-bottom: 16px; flex-wrap: wrap; }
+.stat-card {
+  flex: 1;
+  min-width: 160px;
+  background: #161b22;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.stat-label { font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 0.04em; }
+.stat-value { font-size: 22px; font-weight: 700; color: #fff; margin: 4px 0 2px; }
+.stat-unit  { font-size: 11px; color: #888; }
+
+/* ── Phase cards (RMS) ────────────────────── */
+.phase-card-row { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 16px; }
+.phase-card {
+  flex: 1;
+  min-width: 180px;
+  background: #161b22;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px;
+  padding: 14px 16px;
+  font-size: 13px;
+}
+.phase-card-title { font-size: 13px; font-weight: 600; color: #e0e0e0; margin-bottom: 8px; }
+.pc-lbl { color: #666; font-size: 12px; margin-right: 8px; }
+.pc-val { color: #e0e0e0; font-weight: 500; }
+
+/* ── Phasor layout ───────────────────────── */
+.phasor-layout {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.phasor-plot-card { flex: 2; min-width: 320px; }
+.phasor-values {
+  flex: 1;
+  min-width: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.phasor-val-card {
+  background: #1a2332;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.pv-title { font-size: 13px; font-weight: 600; color: #e0e0e0; margin-bottom: 8px; }
+.pv-grid  {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 4px 8px;
+  align-items: center;
+  font-size: 12px;
+}
+.pv-lbl  { color: #666; }
+.pv-val  { font-weight: 600; color: #fff; }
+.pv-unit { color: #888; font-size: 11px; }
+.pv-polar { font-family: monospace; font-size: 12px; margin-top: 6px; color: #4B9EFF; }
+.pv-rect  { font-family: monospace; font-size: 12px; margin-top: 2px; color: #00FF88; }
+
+/* Phase diff panel */
+.pdiff-panel { margin-top: 12px; }
+.pdiff-title { font-size: 12px; font-weight: 600; color: #888; text-transform: uppercase;
+               letter-spacing: 0.05em; margin-bottom: 8px; }
+.pdiff-row   { display: flex; justify-content: space-between; padding: 4px 0;
+               border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; }
+.pdiff-lbl   { color: #888; }
+.pdiff-val   { color: #e0e0e0; font-weight: 500; }
+
+/* ── Sequence cards ───────────────────────── */
+.seq-card-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.seq-card {
+  flex: 1;
+  min-width: 160px;
+  background: #1a2332;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.seq-card-header {
+  padding: 8px 12px;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+.seq-card-title { font-weight: 700; }
+.seq-card-value { font-size: 26px; font-weight: 700; padding: 8px 12px 0; }
+.seq-card-unit  { font-size: 11px; color: #888; padding: 0 12px 4px; }
+.seq-card-pct   { font-size: 11px; padding: 0 12px 10px; }
+
+/* Interpretation */
+.interpretation-card { }
+.interp-title { font-size: 16px; font-weight: 600; margin-bottom: 12px; }
+.interp-grid  { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.interp-grid > div { font-size: 12px; line-height: 1.5; }
+.interp-grid p { color: #888; margin-top: 4px; }
+.interp-note { font-size: 11px; color: #666; margin-top: 12px; border-top: 1px solid rgba(255,255,255,0.07); padding-top: 8px; }
+
+/* ── Tables ───────────────────────────────── */
+.summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.summary-table.full-width { margin-top: 8px; }
+.summary-table th {
+  text-align: left;
+  color: #666;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+.summary-table td {
+  padding: 7px 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  color: #e0e0e0;
+}
+
+/* ── Text results ─────────────────────────── */
+.txt-tabs { margin-bottom: 16px; }
+.txt-tabs .nav-link { color: #888 !important; font-size: 13px; }
+.txt-tabs .nav-link.active { color: #fff !important; background: rgba(75,158,255,0.15) !important; }
+.txt-content { }
+.info-section { background: #161b22; border: 1px solid rgba(255,255,255,0.07); border-radius: 10px;
+                padding: 16px; margin-bottom: 14px; }
+.info-section-title { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 10px;
+                      padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+.info-row { display: flex; gap: 8px; padding: 4px 0; font-size: 13px; }
+.info-lbl { color: #666; min-width: 180px; }
+.info-val { color: #4B9EFF; font-weight: 500; }
+
+.diag-card { padding: 10px 14px; border-radius: 8px; margin-bottom: 8px; font-size: 13px; }
+.diag-card.warning { background: rgba(255,180,0,0.08); border: 1px solid rgba(255,180,0,0.25); }
+.diag-card.ok      { background: rgba(0,255,136,0.06); border: 1px solid rgba(0,255,136,0.2); }
+.diag-card.info    { background: rgba(75,158,255,0.07); border: 1px solid rgba(75,158,255,0.2); }
+.diag-card p { color: #888; margin-top: 4px; font-size: 12px; }
+
+/* ── Barycenter ───────────────────────────── */
+.bary-layout { display: flex; gap: 16px; flex-wrap: wrap; }
+.bary-main   { flex: 2; min-width: 320px; display: flex; flex-direction: column; }
+.bary-sidebar { flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 12px; }
+.bary-info-card { }
+.accent-panel { background: rgba(75,158,255,0.07); border-color: rgba(75,158,255,0.2); }
+.bary-panel-title { font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 0.06em;
+                    margin-bottom: 8px; }
+.bary-lbl     { font-size: 11px; color: #666; display: block; margin-top: 6px; }
+.bary-big-val { font-size: 28px; font-weight: 700; color: #fff; line-height: 1.1; }
+.bary-unit    { font-size: 11px; color: #666; }
+.bary-stat-row { display: flex; justify-content: space-between; padding: 4px 0;
+                  border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 13px; }
+.bary-val     { color: #e0e0e0; }
+.bary-interp-text { font-size: 12px; color: #888; line-height: 1.5; }
+
+/* ── Cursor panel ─────────────────────────── */
+.cursor-panel {
+  position: absolute;
+  top: 10px; right: 14px;
+  background: #1a2332;
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 12px;
+}
+.cursor-title { font-size: 10px; color: #555; text-transform: uppercase;
+                letter-spacing: 0.05em; margin-bottom: 6px; }
+.cur-label { color: #666; margin-right: 8px; }
+.cur-val   { font-weight: 600; }
+
+/* ── Cursor info bar (below charts) ─────────── */
+.cursor-panel-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  background: #161b22;
+  border: 1px solid rgba(204,68,255,0.20);
+  border-radius: 8px;
+  padding: 8px 16px;
+  margin-bottom: 10px;
+  font-size: 12px;
+}
+
+/* ── No file loaded ───────────────────────── */
+.no-file-page {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  height: 60vh;
+  gap: 12px;
+}
+.no-file-icon  { font-size: 48px; color: #333; }
+.no-file-title { font-size: 18px; color: #555; font-weight: 500; }
+.no-file-sub   { font-size: 13px; color: #444; text-align: center; max-width: 380px; }
+
+.no-data { color: #666; font-size: 13px; padding: 20px 0; }
+
+/* ── Scrollbar ────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.22); }

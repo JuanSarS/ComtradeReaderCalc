@@ -1,219 +1,194 @@
-# COMTRADE Analysis Tool
+# COMTRADE Pro
 
-A professional desktop application for COMTRADE file analysis, focused on power system fault analysis and protection engineering.
+**Herramienta profesional para análisis de fallas en sistemas de potencia usando archivos COMTRADE.**
 
-## Overview
+---
 
-This application provides comprehensive analysis capabilities for COMTRADE (Common Format for Transient Data Exchange) files recorded by protection relays and fault recorders. It is designed for power system protection engineers to analyze fault conditions, compute symmetrical components, and generate professional reports.
+## ⚡ Inicio Rápido
 
-## Features
-
-### File Reading
-- Read COMTRADE files (.cfg and .dat) from protection relays
-- Support for files from simulation tools like ATPDraw
-- Compatible with IEEE C37.111 standard (1991, 1999, 2013 revisions)
-- ASCII and binary format support
-
-### Signal Processing
-- Configurable band-pass filtering (50/60 Hz)
-- Sliding window RMS calculation (one-cycle window)
-- Fundamental frequency phasor computation using DFT
-- DC offset removal
-
-### Symmetrical Component Analysis
-- Fortescue transformation implementation
-- Positive, negative, and zero sequence components
-- Voltage and current imbalance calculation
-- Fault type identification from sequence patterns
-
-### Visualization
-- Instantaneous waveform plots (voltage and current)
-- RMS trend visualization
-- Phasor diagrams (polar plots)
-- Sequence component plots
-- Phase triangle visualization with barycenter tracking
-- Animated triangle transition from pre-fault to fault state
-
-### Reporting
-- Comprehensive PDF report generation
-- Customizable report content
-- Comparative analysis for two files
-- Professional engineering documentation format
-
-## Installation
-
-### Prerequisites
-- Python 3.9 or higher
-- pip package manager
-
-### Setup
-
-1. Clone or download this repository
-
-2. Create a virtual environment (recommended):
+### Opción 1: Ejecutable (Recomendado)
 ```bash
-python -m venv venv
+ComtradeReaderCalc.exe
+```
+o haz doble clic en el archivo `.exe` en la carpeta raíz.
+
+### Opción 2: Script Batch con Menú Interactivo
+```bash
+run_all_options.bat
 ```
 
-3. Activate the virtual environment:
-   - Windows:
-     ```bash
-     venv\Scripts\activate
-     ```
-   - Linux/Mac:
-     ```bash
-     source venv/bin/activate
-     ```
+### Opción 3: Línea de Comandos (Python Directo)
+```bash
+python src/main.py
+```
 
-4. Install dependencies:
+---
+
+## 📋 Requisitos Previos
+
+- **Python 3.9+** (solo si ejecutas desde `python src/main.py`)
+- **Windows** (arquitectura x64 para el ejecutable)
+- **Espacio en disco**: ~200 MB
+
+---
+
+## 🔧 Instalación Paso a Paso
+
+### 1️⃣ Descarga del Proyecto
+
+Clona o descarga el repositorio:
+```bash
+git clone <tu-repo> ComtradeReaderCalc
+cd ComtradeReaderCalc
+```
+
+### 2️⃣ (Opcional) Configurar Entorno Python
+
+Si prefieres ejecutar desde código fuente:
+
+**Crear entorno virtual:**
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+```
+
+**Instalar dependencias:**
 ```bash
 pip install -r requirements.txt
 ```
 
-## Usage
+### 3️⃣ Ejecutar la Aplicación
 
-### Running the Application
-
+**Usa el ejecutable (sin Python instalado):**
 ```bash
-cd src
-python main.py
+ComtradeReaderCalc.exe
 ```
 
-### Basic Workflow
-
-1. **Load File**: Click "Load COMTRADE File" and select a .cfg file
-2. **View Signals**: Navigate through tabs to view different analyses
-3. **Configure Settings**: Set system frequency (50/60 Hz) and analysis parameters
-4. **Generate Report**: Go to Report tab and export PDF
-
-### Tabs Overview
-
-- **Instantaneous Signals**: View raw voltage and current waveforms
-- **RMS Signals**: Analyze RMS trends with sliding window
-- **Phasors**: View phasor diagrams and magnitude/angle tables
-- **Sequence Components**: Analyze symmetrical components and identify fault type
-- **Triangle Visualization**: Examine phase triangle geometry and barycenter motion
-- **Report**: Generate and export PDF reports
-
-## Project Structure
-
-```
-Proy1/
-├── src/
-│   ├── main.py                 # Application entry point
-│   ├── core/                   # Core processing modules
-│   │   ├── comtrade_reader.py
-│   │   ├── signal_filter.py
-│   │   ├── rms_calculator.py
-│   │   ├── phasor_calculator.py
-│   │   ├── symmetrical_components.py
-│   │   └── triangle_analyzer.py
-│   ├── gui/                    # GUI components
-│   │   ├── main_window.py
-│   │   └── tabs/               # Individual tab widgets
-│   └── utils/                  # Utility modules
-│       └── report_generator.py
-├── tests/                      # Unit tests
-├── data/                       # Sample data files
-├── requirements.txt
-└── README.md
-```
-
-## Architecture
-
-The application follows a clean separation of concerns:
-
-- **Core Layer**: Signal processing and analysis algorithms
-- **GUI Layer**: PyQt6-based user interface
-- **Utils Layer**: Report generation and file management
-
-All core processing modules are independent of the GUI, allowing for:
-- Easy testing and validation
-- Potential CLI or web interface in the future
-- Reusable components for other projects
-
-## Development Status
-
-**Current Version**: 1.0.0 (Architecture and Skeleton)
-
-This release provides:
-- ✓ Complete project structure
-- ✓ Class skeletons with comprehensive docstrings
-- ✓ GUI layout and tab organization
-- ✓ Architecture ready for implementation
-
-**Next Steps**: Implement mathematical algorithms and plotting logic in TODO sections
-
-## Technical Details
-
-### Signal Processing
-- **RMS Calculation**: One-cycle sliding window (configurable: centered, forward, backward)
-- **Phasor Calculation**: Discrete Fourier Transform at fundamental frequency
-- **Filtering**: Butterworth band-pass filter centered at system frequency
-
-### Symmetrical Components
-- **Transformation Matrix**: Fortescue's method with 'a' operator
-- **Imbalance Factors**: (V2/V1) and (V0/V1) percentages
-- **Fault Identification**: Pattern matching on sequence magnitudes
-
-### Triangle Analysis
-- **Barycenter**: Centroid of three phasor vertices
-- **Properties**: Area, perimeter, side lengths, asymmetry factor
-- **Animation**: Linear interpolation between states
-
-## For Developers
-
-### Adding New Features
-
-1. Core processing: Add modules in `src/core/`
-2. GUI components: Add tabs in `src/gui/tabs/`
-3. Follow existing class structure and docstring style
-4. Update this README with new capabilities
-
-### Testing
-
+**O el script interactivo:**
 ```bash
-# Run tests (when implemented)
-pytest tests/
+run_all_options.bat
 ```
-
-### Packaging for Distribution
-
-```bash
-# Using PyInstaller (when ready)
-pyinstaller --onefile --windowed src/main.py
-```
-
-## Engineering Notes
-
-### COMTRADE Standard Compliance
-- IEEE C37.111-1991, 1999, 2013
-- Supports both analog and digital channels
-- Handles multiple sampling rates
-
-### Power System Conventions
-- Phasor angles in degrees (0-360° or ±180°)
-- RMS values for magnitude representation
-- Three-phase ABC sequence
-- Positive sequence rotation: counter-clockwise
-
-### Coordinate Systems
-- Phasor diagrams: Complex plane (real, imaginary)
-- Phase angles: Referenced to phase A (typically 0°)
-- Symmetrical components: Zero, positive, negative sequence
-
-## License
-
-Academic/Educational Use
-
-## Authors
-
-Power Systems Protection Engineering Team
-
-## Support
-
-For issues, questions, or contributions, please refer to the course materials or contact the development team.
 
 ---
 
-**Note**: This application is designed for educational and professional use in power system protection engineering. Always validate results against known test cases before using for critical applications.
+## 🎯 Flujo Principal de Uso
+
+1. **Cargar archivo COMTRADE**
+   - Click en "Abrir COMTRADE" en la barra de herramientas
+   - Selecciona archivo `.cfg`
+   - El archivo `.dat` se carga automáticamente
+
+2. **Explorar Señales**
+   - Tab "Señales Instantáneas": visualiza formas de onda brutas y filtradas
+   - Tab "RMS": análisis de valores eficaces
+
+3. **Análisis Fasorial**
+   - Tab "Fasores de Fase": diagramas fasoriales instantáneos
+   - Tab "Fasores de Secuencia": componentes simétricas
+
+4. **Análisis de Secuencia**
+   - Tab "Componentes de Secuencia": descomposición de Fortescue
+   - Identificación automática de tipos de falla
+
+5. **Visualización Avanzada**
+   - Tab "Baricentro Geométrico": trayectoria del triángulo de fases
+   - Animación en tiempo real del centro de masa
+
+6. **Generación de Reportes**
+   - PDF con resultados completos del análisis
+   - Tablas de valores numéricos detallados
+
+---
+
+## 📁 Estructura del Proyecto
+
+```
+ComtradeReaderCalc/
+├── README.md                    # Este archivo (guía de inicio)
+├── ComtradeReaderCalc.exe       # Ejecutable empaquetado
+├── run_all_options.bat          # Script con menú interactivo
+├── requirements.txt             # Dependencias Python
+├── requirements-dev.txt         # Dependencias desarrollo (PyInstaller)
+│
+├── docs/                        # Documentación completa
+│   ├── ARCHITECTURE.md          # Diseño de la aplicación
+│   ├── QUICKSTART.md            # Guía rápida de inicio
+│   ├── VISUAL_GUIDE.md          # Guía visual de UI
+│   ├── PROJECT_SUMMARY.md       # Resumen del proyecto
+│   └── MIGRATION.md             # Notas de migración
+│
+├── src/                         # Código fuente principal
+│   ├── main.py                  # Punto de entrada (PyQt6)
+│   ├── core/                    # Módulos de análisis
+│   ├── gui/                     # Interfaz desktop
+│   └── utils/                   # Utilidades
+│
+├── data/                        # Datos de ejemplo
+├── tests/                       # Tests unitarios
+└── .venv/                       # Entorno virtual (ignorado en git)
+```
+
+---
+
+## 🚀 Scripts Disponibles
+
+### `run_all_options.bat`
+Menú interactivo con opciones:
+1. **Ejecutar aplicación normal** - Abre la UI completa
+2. **Ejecutar dashboard Dash** - Solo web UI (puerto 8050)
+3. **Ejecutar PyQt6 Desktop** - Solo desktop con archivo cargado
+4. **Test de importaciones** - Valida que todo está ok
+5. **Test de análisis** - Ejecuta pipeline de análisis
+6. **Ver logs** - Muestra último archivo de log
+7. **Salir**
+
+### `build_executable.py`
+Regenera el ejecutable `.exe` si modificas código.
+
+```bash
+python build_executable.py
+```
+
+---
+
+## 📊 Capacidades de Análisis
+
+| Feature | Descripción |
+|---------|-------------|
+| **Lectura COMTRADE** | Parseo robusto de archivos .cfg/.dat IEEE C37.111 |
+| **Filtrado adaptativo** | Band-pass 50/60 Hz con protección para baja sampling |
+| **RMS deslizante** | Ventana de un ciclo, actualización progresiva |
+| **Fasores DFT** | Cálculo fundamental y armónicos |
+| **Fourier Transformada** | FFT para análisis de contenido armónico |
+| **Componentes Simétricas** | Descomposición Fortescue (V0, V1, V2) |
+| **Identificación Falla** | Clasificación automática (L-G, L-L, L-L-G, 3Φ) |
+| **Triángulo Dinámico** | Visualización animada de trayectoria de fases |
+| **Generación reportes** | PDF con análisis completo |
+
+---
+
+## 🛠️ Desarrollo
+
+### Modificar y Recompilar
+
+Si copias archivos `.py`:
+```bash
+pip install -r requirements-dev.txt
+python build_executable.py
+```
+
+Esto regenera `ComtradeReaderCalc.exe` con tus cambios.
+
+---
+
+## 📞 Documentación Completa
+
+Para información detallada, consulta la carpeta `docs/`:
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Arquitectura técnica
+- **[docs/QUICKSTART.md](docs/QUICKSTART.md)** - Guía paso a paso
+- **[docs/VISUAL_GUIDE.md](docs/VISUAL_GUIDE.md)** - Referencia UI
+- **[docs/PROJECT_SUMMARY.md](docs/PROJECT_SUMMARY.md)** - Resumen técnico
+
+---
+
+**Última actualización:** Marzo 2026

@@ -8,13 +8,17 @@
 #   3. Or use directly: pyinstaller comtrade_tool.spec
 
 # To create initial spec file:
-# pyinstaller --name="COMTRADEAnalysisTool" --windowed --onefile src/main.py
+# pyinstaller --name="COMTRADEPro" --windowed --onefile src/main.py
 
 # Basic PyInstaller command for manual build:
-# pyinstaller --windowed --onefile --name="COMTRADEAnalysisTool" ^
+# pyinstaller --windowed --onefile --name="COMTRADEPro" ^
 #     --add-data="README.md;." ^
+#     --add-data="dash_app\assets;dash_app\assets" ^
 #     --hidden-import=PyQt6 ^
-#     --hidden-import=matplotlib ^
+#     --hidden-import=PyQt6.QtWebEngineWidgets ^
+#     --hidden-import=PyQt6.QtWebEngineCore ^
+#     --hidden-import=dash ^
+#     --hidden-import=plotly ^
 #     --hidden-import=scipy ^
 #     src/main.py
 
@@ -28,8 +32,8 @@ a = Analysis(
     ['src/main.py'],
     pathex=[],
     binaries=[],
-    datas=[('README.md', '.')],
-    hiddenimports=['PyQt6', 'matplotlib', 'scipy', 'numpy', 'pandas'],
+    datas=[('README.md', '.'), ('dash_app/assets', 'dash_app/assets')],
+    hiddenimports=['PyQt6', 'PyQt6.QtWebEngineWidgets', 'PyQt6.QtWebEngineCore', 'matplotlib', 'dash', 'plotly', 'scipy', 'numpy', 'pandas'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -49,7 +53,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='COMTRADEAnalysisTool',
+    name='COMTRADEPro',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
