@@ -28,7 +28,9 @@ def build_layout():
             dcc.Store(id="store-sync-token", storage_type="memory"),
             dcc.Store(id="store-tab-type", storage_type="memory"),
             dcc.Store(id="store-cursor-ms", storage_type="memory"),
+            dcc.Store(id="store-cursor-play", storage_type="memory"),
             dcc.Interval(id="desktop-sync-interval", interval=1000, n_intervals=0),
+            dcc.Interval(id="cursor-play-interval", interval=120, n_intervals=0, disabled=True),
 
             # ── Sidebar ──────────────────────────────────────────────────
             html.Div(
@@ -156,6 +158,45 @@ def build_layout():
                         style={"marginBottom": "10px", "padding": "8px 12px"},
                         children=[
                             html.Div("Señal Filtrada Global (Cursor Persistente)", className="card-title"),
+                            html.Div(
+                                style={
+                                    "display": "flex",
+                                    "gap": "10px",
+                                    "alignItems": "center",
+                                    "flexWrap": "wrap",
+                                    "marginBottom": "8px",
+                                },
+                                children=[
+                                    html.Button("▶ Play Cursor", id="btn-cursor-play-toggle", className="btn-secondary", n_clicks=0),
+                                    html.Span("PAUSA", id="cursor-play-badge", className="tb-value accent-blue"),
+                                    html.Div("Velocidad", className="tb-label"),
+                                    dcc.Dropdown(
+                                        id="cursor-play-fps",
+                                        options=[
+                                            {"label": "4 fps", "value": 4},
+                                            {"label": "8 fps", "value": 8},
+                                            {"label": "12 fps", "value": 12},
+                                            {"label": "20 fps", "value": 20},
+                                        ],
+                                        value=8,
+                                        clearable=False,
+                                        style={"width": "110px", "fontSize": "12px"},
+                                    ),
+                                    html.Div("Paso", className="tb-label"),
+                                    dcc.Dropdown(
+                                        id="cursor-play-step",
+                                        options=[
+                                            {"label": "x1", "value": 1},
+                                            {"label": "x2", "value": 2},
+                                            {"label": "x5", "value": 5},
+                                            {"label": "x10", "value": 10},
+                                        ],
+                                        value=1,
+                                        clearable=False,
+                                        style={"width": "90px", "fontSize": "12px"},
+                                    ),
+                                ],
+                            ),
                             dbc.RadioItems(
                                 id="global-tab-type",
                                 options=[

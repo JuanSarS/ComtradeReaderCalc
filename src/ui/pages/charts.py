@@ -171,6 +171,7 @@ def make_phasor_fig(
         margin=dict(l=40, r=40, t=50, b=40),
         title=dict(text=title, font=dict(size=14, color=FONT_COLOR), x=0.5),
         showlegend=False,
+        transition=dict(duration=140, easing="cubic-in-out"),
     )
 
     for idx, (name, ph) in enumerate(phasors.items()):
@@ -238,6 +239,7 @@ def make_sequence_phasors_fig(seq_data: dict) -> go.Figure:
         font=dict(family="Inter, sans-serif", color=FONT_COLOR, size=11),
         margin=dict(l=20, r=20, t=50, b=20),
         showlegend=False,
+        transition=dict(duration=140, easing="cubic-in-out"),
     )
     return fig
 
@@ -260,6 +262,7 @@ def make_combined_seq_phasor_fig(seq_data: dict) -> go.Figure:
         margin=dict(l=40, r=40, t=40, b=40),
         showlegend=True,
         legend=dict(bgcolor="rgba(0,0,0,0)", font=dict(size=11)),
+        transition=dict(duration=140, easing="cubic-in-out"),
     )
     labels = {"positive": ("Pos", SEQ_COLORS["positive"]),
               "negative": ("Neg", SEQ_COLORS["negative"]),

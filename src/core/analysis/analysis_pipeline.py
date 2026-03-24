@@ -48,6 +48,73 @@ def _filter_selected(signal_dict: dict, selected_names: list[str]) -> dict:
     return {name: signal_dict[name] for name in selected_names if name in signal_dict}
 
 
+def _voltage_pair_from_channel(channel_info: dict) -> str | None:
+    token = str(channel_info.get("phase", "") or "").upper().strip()
+    token = "".join(ch for ch in token if ch.isalnum())
+    name = str(channel_info.get("name", "") or "").upper().strip()
+    name = "".join(ch for ch in name if ch.isalnum())
+    for src in (token, name):
+        for pair in ("AB", "BC", "CA", "BA", "CB", "AC"):
+            if src == pair or src.endswith(pair):
+                return pair
+    return None
+
+
+def _line_to_phase_phasor_dict(phasor_dict: dict, available_voltage_channels: list[dict]) -> dict:
+    """Convert Vab/Vbc/Vca phasors to equivalent phase phasors Va/Vb/Vc (V0 assumed 0)."""
+    if len(phasor_dict) < 3:
+        return phasor_dict
+
+    by_name = {item.get("name"): item for item in available_voltage_channels}
+    line_map: dict[str, complex] = {}
+
+    for name, ph in phasor_dict.items():
+        info = by_name.get(name, {"name": name})
+        pair = _voltage_pair_from_channel(info)
+        if not pair:
+            continue
+        cval = complex(float(ph.get("real", 0.0)), float(ph.get("imag", 0.0)))
+        if pair == "AB":
+            line_map["AB"] = cval
+        elif pair == "BC":
+            line_map["BC"] = cval
+        elif pair == "CA":
+            line_map["CA"] = cval
+        elif pair == "BA":
+            line_map["AB"] = -cval
+        elif pair == "CB":
+            line_map["BC"] = -cval
+        elif pair == "AC":
+            line_map["CA"] = -cval
+
+    if not all(key in line_map for key in ("AB", "BC", "CA")):
+        return phasor_dict
+
+    vab = line_map["AB"]
+    vbc = line_map["BC"]
+    vca = line_map["CA"]
+    va = (vab - vca) / 3.0
+    vb = (vbc - vab) / 3.0
+    vc = (vca - vbc) / 3.0
+
+    def _pack(val: complex, name: str) -> dict:
+        mag = float(np.abs(val))
+        ang = float(np.degrees(np.angle(val)))
+        return {
+            "magnitude": round(mag, 3),
+            "angle_deg": round(ang, 2),
+            "real": round(float(val.real), 3),
+            "imag": round(float(val.imag), 3),
+            "name": name,
+        }
+
+    return {
+        "VA(eq)": _pack(va, "VA(eq)"),
+        "VB(eq)": _pack(vb, "VB(eq)"),
+        "VC(eq)": _pack(vc, "VC(eq)"),
+    }
+
+
 def process_comtrade_files(contents_list, filenames_list, system_frequency: float = 60.0) -> dict:
     """Process uploaded COMTRADE files from the web UI."""
     if not isinstance(contents_list, list):
@@ -142,6 +209,8 @@ def _run_analysis(cfg_path: Path, system_frequency: float, display_filename: str
         return {"error": str(exc)}
     except Exception as exc:
         return {"error": f"Failed to load COMTRADE file: {str(exc)}"}
+
+    voltage_reference = reader.detect_voltage_reference_mode()
     
     # === STEP 2: Convert to SignalSet (validates structure) ===
     try:
@@ -385,7 +454,13 @@ def _run_analysis(cfg_path: Path, system_frequency: float, display_filename: str
             "severity": symmetrical_components.calculate_unbalance_severity(sequence),
         }
 
-    seq_v = build_sequence_components(phasors_v, "voltage") if len(phasors_v) >= 3 else {}
+    voltage_mode = str(voltage_reference.get("mode", "unknown"))
+    available_voltage_channels = [_channel_info_to_dict(channel) for channel in signal_set.voltage_channels]
+    phasors_for_seq_v = phasors_v
+    if voltage_mode == "line_to_line":
+        phasors_for_seq_v = _line_to_phase_phasor_dict(phasors_v, available_voltage_channels)
+
+    seq_v = build_sequence_components(phasors_for_seq_v, "voltage") if len(phasors_for_seq_v) >= 3 else {}
     seq_i = build_sequence_components(phasors_i, "current") if len(phasors_i) >= 3 else {}
 
     # Barycenter (3-phase average)
@@ -429,6 +504,14 @@ def _run_analysis(cfg_path: Path, system_frequency: float, display_filename: str
 
     # Metadata
     warnings = list(signal_set.warnings)
+    if voltage_mode == "line_to_line":
+        warnings.append(
+            "Se detectaron voltajes linea-linea (LL). Se aplico conversion a fase equivalente para componentes simetricas."
+        )
+    elif voltage_mode == "mixed":
+        warnings.append(
+            "Se detectaron canales de voltaje mixtos (LL/LN). Verifica la seleccion de 3 fases para analisis consistente."
+        )
     if not use_bandpass:
         warnings.append(
             f"Band-pass filter skipped due to low sampling resolution ({samples_per_cycle:.2f} samples/cycle). "
@@ -455,6 +538,9 @@ def _run_analysis(cfg_path: Path, system_frequency: float, display_filename: str
         "detected_fundamental_hz": round(detected_fundamental, 3),
         "voltage_channels": voltage_names,
         "current_channels": current_names,
+        "voltage_reference_mode": voltage_mode,
+        "voltage_reference_label": str(voltage_reference.get("label", "Desconocido")),
+        "voltage_pairs_detected": dict(voltage_reference.get("pairs_detected", {})),
         "other_analog_channels": [channel.name for channel in signal_set.other_analog_channels],
         "logical_channel_names": list(signal_set.logical_channel_names),
         "downsample_factor": factor,
@@ -483,7 +569,7 @@ def _run_analysis(cfg_path: Path, system_frequency: float, display_filename: str
         "pre_phasors": pre_phasors,
         "post_phasors": post_phasors,
         "available_channels": {
-            "voltage": [_channel_info_to_dict(channel) for channel in signal_set.voltage_channels],
+            "voltage": available_voltage_channels,
             "current": [_channel_info_to_dict(channel) for channel in signal_set.current_channels],
             "other": [_channel_info_to_dict(channel) for channel in signal_set.other_analog_channels],
         },

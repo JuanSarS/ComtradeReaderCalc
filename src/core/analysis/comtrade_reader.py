@@ -179,6 +179,75 @@ class COMTRADEReader:
         cleaned = re.sub(r"[^A-Z0-9]+", "", name.upper())
         return cleaned.strip()
 
+    @staticmethod
+    def _extract_voltage_pair_token(channel: AnalogChannel) -> Optional[str]:
+        """Extract voltage pair token such as AB/BC/CA/AN/AG from channel info."""
+        phase_token = re.sub(r"[^A-Z0-9]+", "", (channel.phase or "").upper())
+        name_token = COMTRADEReader._normalize_channel_name(channel.name or "")
+
+        for token in (phase_token, name_token):
+            if not token:
+                continue
+            for pair in ("AB", "BC", "CA", "BA", "CB", "AC", "AN", "BN", "CN", "AG", "BG", "CG"):
+                if token == pair or token.endswith(pair):
+                    return pair
+        return None
+
+    def detect_voltage_reference_mode(self) -> Dict[str, object]:
+        """
+        Detect whether voltage channels are line-to-line (LL), line-to-neutral (LN), mixed, or unknown.
+
+        Returns:
+            Dict with keys: mode, label, ll_channels, ln_channels, pairs_detected
+        """
+        voltage_channels = [ch for ch in self.analog_channels if self._classify_analog_channel(ch) == "voltage"]
+        if not voltage_channels:
+            return {
+                "mode": "unknown",
+                "label": "Desconocido",
+                "ll_channels": [],
+                "ln_channels": [],
+                "pairs_detected": [],
+            }
+
+        ll_channels: List[str] = []
+        ln_channels: List[str] = []
+        pairs_detected: Dict[str, str] = {}
+
+        for channel in voltage_channels:
+            token = self._extract_voltage_pair_token(channel)
+            if token in {"AB", "BC", "CA", "BA", "CB", "AC"}:
+                ll_channels.append(channel.name)
+                pairs_detected[channel.name] = token
+            elif token in {"AN", "BN", "CN", "AG", "BG", "CG"}:
+                ln_channels.append(channel.name)
+                pairs_detected[channel.name] = token
+            elif (channel.phase or "").upper() in {"A", "B", "C"}:
+                ln_channels.append(channel.name)
+
+        ll_count = len(ll_channels)
+        ln_count = len(ln_channels)
+        if ll_count >= 3 and ln_count == 0:
+            mode = "line_to_line"
+            label = "Linea a linea (LL)"
+        elif ln_count >= 3 and ll_count == 0:
+            mode = "line_to_neutral"
+            label = "Fase a tierra/neutro (LN)"
+        elif ll_count > 0 and ln_count > 0:
+            mode = "mixed"
+            label = "Mixto (LL y LN)"
+        else:
+            mode = "unknown"
+            label = "Desconocido"
+
+        return {
+            "mode": mode,
+            "label": label,
+            "ll_channels": ll_channels,
+            "ln_channels": ln_channels,
+            "pairs_detected": pairs_detected,
+        }
+
     def _detect_phase_groups(self, channel_names: List[str]) -> List[Dict[str, object]]:
         grouped: Dict[str, Dict[str, str]] = {}
         for name in channel_names:

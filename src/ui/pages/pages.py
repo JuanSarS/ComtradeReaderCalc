@@ -156,6 +156,11 @@ def page_phasors(default_type: str = "voltage") -> html.Div:
                         dcc.Graph(
                             id="graph-phasors",
                             config={"displayModeBar": True},
+                            animate=True,
+                            animation_options={
+                                "frame": {"duration": 80, "redraw": True},
+                                "transition": {"duration": 120, "easing": "cubic-in-out"},
+                            },
                             style={"height": "440px"},
                         ),
                         "phasor-plot-card",
@@ -208,6 +213,11 @@ def page_seq_phasors(default_type: str = "voltage") -> html.Div:
                 dcc.Graph(
                     id="graph-seq-phasors-3",
                     config={"displayModeBar": True},
+                    animate=True,
+                    animation_options={
+                        "frame": {"duration": 80, "redraw": True},
+                        "transition": {"duration": 120, "easing": "cubic-in-out"},
+                    },
                     style={"height": "460px"},
                 )
             ),
@@ -218,6 +228,11 @@ def page_seq_phasors(default_type: str = "voltage") -> html.Div:
                         dcc.Graph(
                             id="graph-seq-combined",
                             config={"displayModeBar": True},
+                            animate=True,
+                            animation_options={
+                                "frame": {"duration": 80, "redraw": True},
+                                "transition": {"duration": 120, "easing": "cubic-in-out"},
+                            },
                             style={"height": "380px"},
                         ),
                         "phasor-plot-card",
@@ -266,21 +281,6 @@ def page_barycenter() -> html.Div:
                         children=[
                             _card(
                                 [
-                                    html.Div("Trayectoria del Baricentro", className="card-title"),
-                                    dcc.Graph(
-                                        id="graph-bary-trajectory",
-                                        config={"displayModeBar": True, "scrollZoom": True},
-                                        animate=True,
-                                        animation_options={
-                                            "transition": {"duration": 500},
-                                            "frame": {"duration": 500, "redraw": True},
-                                        },
-                                        style={"height": "380px"},
-                                    ),
-                                ]
-                            ),
-                            _card(
-                                [
                                     html.Div("Plano Vectorial Detallado", className="card-title"),
                                     dcc.Graph(
                                         id="graph-bary-vector",
@@ -290,7 +290,7 @@ def page_barycenter() -> html.Div:
                                             "frame": {"redraw": False, "duration": 0},
                                             "transition": {"duration": 2000, "easing": "bounce-in-out"},
                                         },
-                                        style={"height": "300px"},
+                                        style={"height": "420px"},
                                     ),
                                 ]
                             ),

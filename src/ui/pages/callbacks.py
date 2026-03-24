@@ -16,7 +16,7 @@ if __package__:
     from src.ui.pages.charts import (
         make_instantaneous_fig, make_rms_fig, make_phasor_fig,
         make_sequence_waveform_fig, make_sequence_phasors_fig,
-        make_combined_seq_phasor_fig, make_barycenter_trajectory_fig,
+        make_combined_seq_phasor_fig,
         make_barycenter_vector_fig,
     )
     from src.ui.pages.pages import (
@@ -29,7 +29,7 @@ else:
     from src.ui.pages.charts import (
         make_instantaneous_fig, make_rms_fig, make_phasor_fig,
         make_sequence_waveform_fig, make_sequence_phasors_fig,
-        make_combined_seq_phasor_fig, make_barycenter_trajectory_fig,
+        make_combined_seq_phasor_fig,
         make_barycenter_vector_fig,
     )
     from src.ui.pages.pages import (
@@ -295,6 +295,131 @@ def _phasors_relative_to_phase_a(phasor_dict: dict) -> dict:
         }
     return out
 
+
+def _voltage_reference_mode(meta: dict) -> str:
+    return str((meta or {}).get("voltage_reference_mode", "unknown") or "unknown")
+
+
+def _voltage_axis_label(mode: str, rms: bool = False) -> str:
+    if rms:
+        if mode == "line_to_line":
+            return "Voltaje RMS Linea-Linea (V)"
+        if mode == "line_to_neutral":
+            return "Voltaje RMS Fase-Tierra (V)"
+        if mode == "mixed":
+            return "Voltaje RMS (V) [Mixto LL/LN]"
+        return "Voltaje RMS (V)"
+    if mode == "line_to_line":
+        return "Voltaje Linea-Linea (V)"
+    if mode == "line_to_neutral":
+        return "Voltaje Fase-Tierra (V)"
+    if mode == "mixed":
+        return "Voltaje (V) [Mixto LL/LN]"
+    return "Voltaje (V)"
+
+
+def _extract_line_pair_token(name: str, data: dict) -> str | None:
+    voltage_info = data.get("available_channels", {}).get("voltage", [])
+    by_name = {item.get("name", ""): item for item in voltage_info}
+    info = by_name.get(name, {})
+    phase = "".join(ch for ch in str(info.get("phase", "")).upper() if ch.isalnum())
+    clean_name = "".join(ch for ch in str(name).upper() if ch.isalnum())
+    for src in (phase, clean_name):
+        for pair in ("AB", "BC", "CA", "BA", "CB", "AC"):
+            if src == pair or src.endswith(pair):
+                return pair
+    return None
+
+
+def _convert_line_voltage_phasors_to_phase_equivalent(phasor_dict: dict, data: dict, tab_type: str) -> dict:
+    if tab_type != "voltage" or len(phasor_dict) < 3:
+        return phasor_dict
+
+    line_map: dict[str, complex] = {}
+    for name, ph in phasor_dict.items():
+        pair = _extract_line_pair_token(name, data)
+        if not pair:
+            continue
+        cval = complex(float(ph.get("real", 0.0)), float(ph.get("imag", 0.0)))
+        if pair == "AB":
+            line_map["AB"] = cval
+        elif pair == "BC":
+            line_map["BC"] = cval
+        elif pair == "CA":
+            line_map["CA"] = cval
+        elif pair == "BA":
+            line_map["AB"] = -cval
+        elif pair == "CB":
+            line_map["BC"] = -cval
+        elif pair == "AC":
+            line_map["CA"] = -cval
+
+    if not all(key in line_map for key in ("AB", "BC", "CA")):
+        return phasor_dict
+
+    vab = line_map["AB"]
+    vbc = line_map["BC"]
+    vca = line_map["CA"]
+    va = (vab - vca) / 3.0
+    vb = (vbc - vab) / 3.0
+    vc = (vca - vbc) / 3.0
+
+    def _pack(value: complex, name: str) -> dict:
+        return {
+            "magnitude": float(np.abs(value)),
+            "angle_deg": float(np.degrees(np.angle(value))),
+            "real": float(value.real),
+            "imag": float(value.imag),
+            "name": name,
+        }
+
+    return {
+        "VA(eq)": _pack(va, "VA(eq)"),
+        "VB(eq)": _pack(vb, "VB(eq)"),
+        "VC(eq)": _pack(vc, "VC(eq)"),
+    }
+
+
+def _convert_line_voltage_signals_to_phase_equivalent(signal_dict: dict, data: dict, tab_type: str) -> dict:
+    if tab_type != "voltage" or len(signal_dict) < 3:
+        return signal_dict
+
+    line_map: dict[str, np.ndarray] = {}
+    for name, vals in signal_dict.items():
+        pair = _extract_line_pair_token(name, data)
+        if not pair:
+            continue
+        arr = np.array(vals, dtype=float)
+        if pair == "AB":
+            line_map["AB"] = arr
+        elif pair == "BC":
+            line_map["BC"] = arr
+        elif pair == "CA":
+            line_map["CA"] = arr
+        elif pair == "BA":
+            line_map["AB"] = -arr
+        elif pair == "CB":
+            line_map["BC"] = -arr
+        elif pair == "AC":
+            line_map["CA"] = -arr
+
+    if not all(key in line_map for key in ("AB", "BC", "CA")):
+        return signal_dict
+
+    n = min(len(line_map["AB"]), len(line_map["BC"]), len(line_map["CA"]))
+    vab = line_map["AB"][:n]
+    vbc = line_map["BC"][:n]
+    vca = line_map["CA"][:n]
+
+    va = (vab - vca) / 3.0
+    vb = (vbc - vab) / 3.0
+    vc = (vca - vbc) / 3.0
+    return {
+        "VA(eq)": va.tolist(),
+        "VB(eq)": vb.tolist(),
+        "VC(eq)": vc.tolist(),
+    }
+
 # ─── File upload → parse → store ────────────────────────────────────────────
 
 @callback(
@@ -334,10 +459,11 @@ def ingest_file(contents, filename):
 
     meta = result.get("metadata", {})
     freq_txt = f"{meta.get('system_freq_hz', 60)} Hz"
+    vref_txt = str(meta.get("voltage_reference_label", "Desconocido"))
     indicator = html.Div([
         html.Span("● ", style={"color": "#00FF88"}),
         html.Span(display_name, style={"color": "#e0e0e0", "fontWeight": "500"}),
-        html.Div(f"Cargado • {freq_txt}", style={"color": "#888", "fontSize": "11px"}),
+        html.Div(f"Cargado • {freq_txt} • {vref_txt}", style={"color": "#888", "fontSize": "11px"}),
     ], className="file-indicator-content")
 
     return result, primary_name, display_name, "Procesado", "tb-value accent-green", indicator
@@ -375,10 +501,11 @@ def sync_desktop_selection(_n_intervals, current_revision):
 
     meta = result.get("metadata", {})
     freq_txt = f"{meta.get('system_freq_hz', 60)} Hz"
+    vref_txt = str(meta.get("voltage_reference_label", "Desconocido"))
     indicator = html.Div([
         html.Span("● ", style={"color": "#00FF88"}),
         html.Span(display_name, style={"color": "#e0e0e0", "fontWeight": "500"}),
-        html.Div(f"Cargado • {freq_txt}", style={"color": "#888", "fontSize": "11px"}),
+        html.Div(f"Cargado • {freq_txt} • {vref_txt}", style={"color": "#888", "fontSize": "11px"}),
     ], className="file-indicator-content")
     return result, source_path, display_name, "Procesado", "tb-value accent-green", indicator, revision
 
@@ -514,6 +641,78 @@ def save_tab_type(v_global):
 )
 def sync_global_type_control(tab_type):
     return tab_type or "voltage"
+
+
+# ─── Cursor Play/Pause controls ─────────────────────────────────────────────
+
+@callback(
+    Output("store-cursor-play", "data"),
+    Output("btn-cursor-play-toggle", "children"),
+    Output("btn-cursor-play-toggle", "className"),
+    Output("btn-cursor-play-toggle", "disabled"),
+    Input("btn-cursor-play-toggle", "n_clicks"),
+    Input("store-data", "data"),
+    State("store-cursor-play", "data"),
+    prevent_initial_call=False,
+)
+def toggle_cursor_play(_n_clicks, data, playing_state):
+    time_ms = (data or {}).get("time_ms", []) if data else []
+    has_data = bool(time_ms)
+    if not has_data:
+        return False, "▶ Play Cursor", "btn-secondary", True
+
+    playing = bool(playing_state) if playing_state is not None else False
+    if ctx.triggered_id == "btn-cursor-play-toggle":
+        playing = not playing
+
+    if playing:
+        return True, "⏸ Pausar Cursor", "btn-secondary", False
+    return False, "▶ Play Cursor", "btn-secondary", False
+
+
+@callback(
+    Output("cursor-play-interval", "disabled"),
+    Output("cursor-play-interval", "interval"),
+    Output("cursor-play-badge", "children"),
+    Input("store-cursor-play", "data"),
+    Input("cursor-play-fps", "value"),
+    prevent_initial_call=False,
+)
+def configure_cursor_interval(playing_state, fps_value):
+    fps = int(fps_value or 8)
+    fps = max(1, fps)
+    interval_ms = int(round(1000.0 / fps))
+    playing = bool(playing_state)
+    return (not playing), interval_ms, ("PLAY" if playing else "PAUSA")
+
+
+@callback(
+    Output("store-cursor-ms", "data", allow_duplicate=True),
+    Input("cursor-play-interval", "n_intervals"),
+    State("store-cursor-play", "data"),
+    State("store-data", "data"),
+    State("store-cursor-ms", "data"),
+    State("cursor-play-step", "value"),
+    prevent_initial_call=True,
+)
+def autoplay_cursor(_n_intervals, playing_state, data, cursor_ms, step_value):
+    if not playing_state or not data:
+        raise PreventUpdate
+
+    time_ms = np.array(data.get("time_ms", []), dtype=float)
+    if len(time_ms) == 0:
+        raise PreventUpdate
+
+    step = int(step_value or 1)
+    step = max(1, step)
+
+    if cursor_ms is None:
+        idx = 0
+    else:
+        idx = _cursor_idx(time_ms.tolist(), float(cursor_ms))
+
+    next_idx = (idx + step) % len(time_ms)
+    return float(time_ms[next_idx])
 
 
 # ─── Cursor: save position from any time-domain graph ────────────────────────
@@ -735,7 +934,8 @@ def update_instantaneous(tab_type, data, selected, cursor_ms, show_raw):
     signals = data["voltages"] if tab_type == "voltage" else data["currents"]
     names = _selected_names(selected, "voltage" if tab_type == "voltage" else "current", list(signals.keys()))
     signals = _filter_by_names(signals, names)
-    y_label = "Voltaje (V)" if tab_type == "voltage" else "Corriente (A)"
+    mode = _voltage_reference_mode(data.get("metadata", {}))
+    y_label = _voltage_axis_label(mode, rms=False) if tab_type == "voltage" else "Corriente (A)"
 
     raw_signals_dict = None
     if show_raw and "show" in (show_raw or []):
@@ -754,6 +954,7 @@ def update_instantaneous(tab_type, data, selected, cursor_ms, show_raw):
         _stat_card("Muestras Totales",      str(meta.get("total_samples", "—"))),
         _stat_card("Muestras Graficadas",   str(meta.get("plot_sample_count", len(time_ms)))),
         _stat_card("Frecuencia de Muestreo", str(meta.get("sampling_rate_hz", "—")), "Hz"),
+        _stat_card("Referencia de Voltaje", str(meta.get("voltage_reference_label", "—"))),
         _stat_card("Duración",               str(meta.get("duration_s", "—")), "s"),
     ]
     return fig, stats
@@ -778,7 +979,8 @@ def update_rms(tab_type, data, selected, cursor_ms):
     rms_dict = data["rms_v"] if tab_type == "voltage" else data["rms_i"]
     names = _selected_names(selected, "voltage" if tab_type == "voltage" else "current", list(rms_dict.keys()))
     rms_dict = _filter_by_names(rms_dict, names)
-    y_label  = "Voltaje RMS (V)" if tab_type == "voltage" else "Corriente RMS (A)"
+    mode = _voltage_reference_mode(data.get("metadata", {}))
+    y_label  = _voltage_axis_label(mode, rms=True) if tab_type == "voltage" else "Corriente RMS (A)"
     unit     = "V" if tab_type == "voltage" else "A"
     fig = make_rms_fig(time_ms, rms_dict, y_label, cursor_ms=cursor_ms)
 
@@ -845,7 +1047,23 @@ def update_phasors(tab_type, data, selected, cursor_ms):
         ph_dict = _filter_by_names(ph_static, names)
     ph_dict = _phasors_relative_to_phase_a(ph_dict)
     unit   = "V" if tab_type == "voltage" else "A"
-    fig = make_phasor_fig(ph_dict)
+    if tab_type == "voltage":
+        mode = _voltage_reference_mode(data.get("metadata", {}))
+        mode_lbl = {
+            "line_to_line": "LL",
+            "line_to_neutral": "LN",
+            "mixed": "Mixto",
+            "unknown": "Desconocido",
+        }.get(mode, "Desconocido")
+        title = f"Fasores de Fase ({mode_lbl})"
+        if cursor_ms is not None:
+            title += f" • t = {float(cursor_ms):.3f} ms"
+        fig = make_phasor_fig(ph_dict, title=title)
+    else:
+        title = "Fasores de Fase (Corriente)"
+        if cursor_ms is not None:
+            title += f" • t = {float(cursor_ms):.3f} ms"
+        fig = make_phasor_fig(ph_dict, title=title)
 
     phase_colors = {"A": "#FF4B4B", "B": "#FFB800", "C": "#4B9EFF"}
     cards = []
@@ -945,13 +1163,20 @@ def update_sequence(tab_type, data, selected, cursor_ms):
     else:
         ph_dict = _filter_by_names(ph_dict, names)
 
-    seq = _build_sequence_from_phasors(ph_dict, "voltage" if tab_type == "voltage" else "current")
+    mode = _voltage_reference_mode(data.get("metadata", {}))
+    seq_input_ph = ph_dict
+    seq_input_sig = sigs
+    if tab_type == "voltage" and mode == "line_to_line":
+        seq_input_ph = _convert_line_voltage_phasors_to_phase_equivalent(ph_dict, data, tab_type)
+        seq_input_sig = _convert_line_voltage_signals_to_phase_equivalent(sigs, data, tab_type)
+
+    seq = _build_sequence_from_phasors(seq_input_ph, "voltage" if tab_type == "voltage" else "current")
     meta  = data.get("metadata", {})
     freq  = meta.get("system_freq_hz", 60.0)
     fs_hz = meta.get("sampling_rate_hz", 1.0)
     unit  = "V" if tab_type == "voltage" else "A"
     t     = data["time_ms"]
-    seq_rms = _sequence_rms_trends(sigs, float(freq), float(fs_hz))
+    seq_rms = _sequence_rms_trends(seq_input_sig, float(freq), float(fs_hz))
 
     if not seq:
         warning = html.Div("Symmetrical component calculation requires 3-phase signals.", style={"color": "#FFB800"})
@@ -973,7 +1198,7 @@ def update_sequence(tab_type, data, selected, cursor_ms):
         system_freq=freq,
         cursor_ms=cursor_ms,
         seq_rms=seq_rms,
-        y_label=("Voltaje RMS (V)" if tab_type == "voltage" else "Corriente RMS (A)"),
+        y_label=(_voltage_axis_label(mode, rms=True) if tab_type == "voltage" else "Corriente RMS (A)"),
         uirevision=ui_token,
     )
 
@@ -1025,6 +1250,18 @@ def update_sequence(tab_type, data, selected, cursor_ms):
     interp = html.Div([
         html.H4("Interpretación de Componentes Simétricas",
                 className="interp-title"),
+        html.Div(
+            "Referencia de voltaje detectada: LL (conversion a fase equivalente para calculos)"
+            if tab_type == "voltage" and mode == "line_to_line"
+            else "Referencia de voltaje detectada: LN"
+            if tab_type == "voltage" and mode == "line_to_neutral"
+            else "Referencia de voltaje detectada: Mixta LL/LN"
+            if tab_type == "voltage" and mode == "mixed"
+            else "Referencia de voltaje: no aplica para corrientes"
+            if tab_type != "voltage"
+            else "Referencia de voltaje detectada: Desconocida",
+            style={"color": "#4B9EFF", "marginBottom": "10px"},
+        ),
         html.Div(className="interp-grid", children=[
             html.Div([
                 html.Span("● ", style={"color": "#00FF88"}),
@@ -1085,12 +1322,20 @@ def update_seq_phasors(tab_type, data, selected, cursor_ms):
     else:
         ph_dict = _filter_by_names(ph_dict, names)
     ph_dict = _phasors_relative_to_phase_a(ph_dict)
-    seq = _build_sequence_from_phasors(ph_dict, "voltage" if tab_type == "voltage" else "current")
+    mode = _voltage_reference_mode(data.get("metadata", {}))
+    seq_input_ph = ph_dict
+    if tab_type == "voltage" and mode == "line_to_line":
+        seq_input_ph = _convert_line_voltage_phasors_to_phase_equivalent(ph_dict, data, tab_type)
+
+    seq = _build_sequence_from_phasors(seq_input_ph, "voltage" if tab_type == "voltage" else "current")
     if not seq:
         return empty_3, empty_c, html.Div("Symmetrical component calculation requires 3-phase signals.", style={"color": "#FFB800"})
 
     fig3  = make_sequence_phasors_fig(seq)
     figc  = make_combined_seq_phasor_fig(seq)
+    time_tag = f"t = {float(cursor_ms):.3f} ms" if cursor_ms is not None else "t = —"
+    fig3.update_layout(title=dict(text=f"Fasores de Secuencia (3 planos) • {time_tag}", x=0.5))
+    figc.update_layout(title=dict(text=f"Fasores de Secuencia (combinado) • {time_tag}", x=0.5))
 
     unit = "V" if tab_type == "voltage" else "A"
     neg_pct  = seq.get("neg_imbalance_pct",  0.0)
@@ -1125,7 +1370,9 @@ def update_seq_phasors(tab_type, data, selected, cursor_ms):
             html.Span(f"{zero_pct:.2f}%", className="pdiff-val"),
         ]),
         html.Div(className="interp-note",
-                 children="Nota: Las componentes de secuencia son fundamentales para el análisis "
+                 children=("Referencia de voltaje LL detectada: se usa conversion a fase equivalente en el calculo de secuencias. "
+                           if tab_type == "voltage" and mode == "line_to_line" else "") +
+                          "Nota: Las componentes de secuencia son fundamentales para el análisis "
                           "de fallas. La presencia significativa de secuencia negativa indica "
                           "desbalance, mientras que la secuencia cero indica fallas a tierra."),
     ])
@@ -1149,7 +1396,12 @@ def update_text_results(active_tab, data, selected):
     meta = data.get("metadata",  {})
     ph_v = _filter_by_names(data.get("phasors_v_all", {}), _selected_names(selected, "voltage", list(data.get("phasors_v_all", {}).keys())))
     ph_i = _filter_by_names(data.get("phasors_i_all", {}), _selected_names(selected, "current", list(data.get("phasors_i_all", {}).keys())))
-    seq_v = _build_sequence_from_phasors(ph_v, "voltage")
+    mode = _voltage_reference_mode(meta)
+    if mode == "line_to_line":
+        ph_v_seq = _convert_line_voltage_phasors_to_phase_equivalent(ph_v, data, "voltage")
+    else:
+        ph_v_seq = ph_v
+    seq_v = _build_sequence_from_phasors(ph_v_seq, "voltage")
     seq_i = _build_sequence_from_phasors(ph_i, "current")
 
     if active_tab == "txt-summary":
@@ -1179,6 +1431,7 @@ def _summary_section(meta, seq_v, seq_i, data, selected):
             _row("Archivo",                  meta.get("filename", "—")),
             _row("Frecuencia nominal",        f"{meta.get('system_freq_hz', '—')} Hz"),
             _row("Frecuencia de muestreo",    f"{meta.get('sampling_rate_hz', '—')} Hz"),
+            _row("Referencia de voltaje",      meta.get("voltage_reference_label", "Desconocida")),
             _row("Número de muestras",        meta.get("total_samples", "—")),
             _row("Duración",                  f"{meta.get('duration_s', '—')} s"),
             _row("Muestras por ciclo",        meta.get("samples_per_cycle", "—")),
@@ -1381,7 +1634,6 @@ def _sequence_section(seq_v, seq_i):
 # ─── Barycenter ──────────────────────────────────────────────────────────────
 
 @callback(
-    Output("graph-bary-trajectory", "figure"),
     Output("graph-bary-vector",     "figure"),
     Output("bary-coords-panel",     "children"),
     Output("bary-stats-panel",      "children"),
@@ -1391,16 +1643,14 @@ def _sequence_section(seq_v, seq_i):
     Input("store-data", "data"),
     Input("store-selected-signals", "data"),
     Input("store-cursor-ms", "data"),
-    State("graph-bary-trajectory", "figure"),
     prevent_initial_call=False,
 )
-def update_barycenter(tab_type, data, selected, cursor_ms, existing_traj_fig):
-    empty_t = make_barycenter_trajectory_fig([], [])
+def update_barycenter(tab_type, data, selected, cursor_ms):
     empty_v = make_barycenter_vector_fig(0.0, 0.0)
     empty_panels = [html.Div(), html.Div(), html.Div(), html.Div()]
 
     if not data:
-        return empty_t, empty_v, *empty_panels
+        return empty_v, *empty_panels
 
     active_type = tab_type or "voltage"
     signal_key = "voltages" if active_type == "voltage" else "currents"
@@ -1412,7 +1662,7 @@ def update_barycenter(tab_type, data, selected, cursor_ms, existing_traj_fig):
     selected_signals = _filter_by_names(data.get(signal_key, {}), selected_names)
     ok, _ = _require_three_phase_or_empty(selected_signals)
     if not ok:
-        return empty_t, empty_v, *empty_panels
+        return empty_v, *empty_panels
 
     signal_arrays = [np.array(values, dtype=float) for values in selected_signals.values()][:3]
 
@@ -1425,28 +1675,9 @@ def update_barycenter(tab_type, data, selected, cursor_ms, existing_traj_fig):
     idx = _cursor_idx(time_ms, float(cursor_ms)) if (cursor_ms is not None and time_ms) else (len(time_ms) - 1 if time_ms else 0)
     idx = max(0, min(idx, len(bary_r) - 1)) if bary_r else 0
 
-    traj_x = bary_r[:idx + 1] if bary_r else []
-    traj_y = bary_i_[:idx + 1] if bary_i_ else []
-
-    # Reuse the existing figure when possible so Plotly animates trace updates.
-    if traj_x and isinstance(existing_traj_fig, dict) and len(existing_traj_fig.get("data", [])) >= 2:
-        fig_t = existing_traj_fig
-        fig_t.setdefault("layout", {})
-        fig_t["layout"]["transition"] = {"duration": 500, "easing": "cubic-in-out"}
-
-        fig_t["data"][0]["x"] = traj_x
-        fig_t["data"][0]["y"] = traj_y
-        fig_t["data"][0].setdefault("marker", {})
-        fig_t["data"][0]["marker"]["color"] = list(range(len(traj_x)))
-        fig_t["data"][0]["marker"]["colorscale"] = "Blues"
-
-        fig_t["data"][1]["x"] = [traj_x[-1]]
-        fig_t["data"][1]["y"] = [traj_y[-1]]
-    else:
-        fig_t = make_barycenter_trajectory_fig(bary_r, bary_i_, current_index=idx)
-
-    cr = float(traj_x[-1]) if traj_x else 0.0
-    ci = float(traj_y[-1]) if traj_y else 0.0
+    points_plotted = idx + 1 if bary_r else 0
+    cr = float(bary_r[idx]) if bary_r else 0.0
+    ci = float(bary_i_[idx]) if bary_i_ else 0.0
 
     dyn_ph = _phasors_from_cursor(
         selected_signals,
@@ -1467,6 +1698,10 @@ def update_barycenter(tab_type, data, selected, cursor_ms, existing_traj_fig):
         ci = float(tri.barycenter.imag)
 
     fig_v = make_barycenter_vector_fig(cr, ci, phase_phasors=dyn_ph)
+    if cursor_ms is not None:
+        fig_v.update_layout(title=dict(text=f"Baricentro Geometrico • t = {float(cursor_ms):.3f} ms", x=0.5))
+    else:
+        fig_v.update_layout(title=dict(text="Baricentro Geometrico", x=0.5))
 
     dist   = float(np.sqrt(cr ** 2 + ci ** 2))
     angle  = float(np.degrees(np.arctan2(ci, cr)))
@@ -1511,7 +1746,7 @@ def update_barycenter(tab_type, data, selected, cursor_ms, existing_traj_fig):
         ]),
         html.Div(className="bary-stat-row", children=[
             html.Span("Puntos trazados:", className="bary-lbl"),
-            html.Span(str(len(traj_x)), className="bary-val"),
+            html.Span(str(points_plotted), className="bary-val"),
         ]),
     ])
 
@@ -1534,4 +1769,4 @@ def update_barycenter(tab_type, data, selected, cursor_ms, existing_traj_fig):
                  style={"color": "#4B9EFF", "fontFamily": "monospace", "fontSize": "13px"}),
     ])
 
-    return fig_t, fig_v, coords, stats, interp, complex_panel
+    return fig_v, coords, stats, interp, complex_panel
