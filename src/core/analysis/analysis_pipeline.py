@@ -24,11 +24,27 @@ MAX_PLOT_POINTS = 5000
 
 
 def _downsample_factor(sample_count: int) -> int:
-    return max(1, sample_count // MAX_PLOT_POINTS)
+    return max(1, int(np.ceil(sample_count / float(MAX_PLOT_POINTS))))
 
 
-def _downsample_signal_dict(signal_dict: dict[str, np.ndarray], factor: int) -> dict[str, list[float]]:
-    return {name: np.asarray(values)[::factor].tolist() for name, values in signal_dict.items()}
+def _resample_1d(values: np.ndarray, target_count: int) -> np.ndarray:
+    arr = np.asarray(values, dtype=float)
+    n = len(arr)
+    if n == 0 or target_count <= 0:
+        return np.array([], dtype=float)
+    if n <= target_count:
+        return arr
+
+    x_old = np.linspace(0.0, 1.0, n)
+    x_new = np.linspace(0.0, 1.0, target_count)
+    return np.interp(x_new, x_old, arr)
+
+
+def _downsample_signal_dict(signal_dict: dict[str, np.ndarray], target_count: int) -> dict[str, list[float]]:
+    return {
+        name: _resample_1d(np.asarray(values, dtype=float), target_count).tolist()
+        for name, values in signal_dict.items()
+    }
 
 
 def _channel_info_to_dict(channel) -> dict:
@@ -333,8 +349,10 @@ def _run_analysis(cfg_path: Path, system_frequency: float, display_filename: str
     # === STEP 6: Format output for legacy UI compatibility ===
     analysis_id = analysis_cache.put(signal_set)
     time_ms_full = signal_set.time_vector * 1000.0
-    factor = _downsample_factor(len(time_ms_full))
-    time_ms = time_ms_full[::factor].tolist()
+    original_count = len(time_ms_full)
+    target_count = min(original_count, MAX_PLOT_POINTS)
+    factor = _downsample_factor(original_count)
+    time_ms = _resample_1d(time_ms_full, target_count).tolist()
 
     voltage_names = [ch.name for ch in signal_set.voltage_channels]
     current_names = [ch.name for ch in signal_set.current_channels]
@@ -358,8 +376,8 @@ def _run_analysis(cfg_path: Path, system_frequency: float, display_filename: str
         for name in current_names
     }
 
-    voltages = _downsample_signal_dict(all_voltage_signals, factor)
-    currents = _downsample_signal_dict(all_current_signals, factor)
+    voltages = _downsample_signal_dict(all_voltage_signals, target_count)
+    currents = _downsample_signal_dict(all_current_signals, target_count)
 
     # Raw (unfiltered) signals for "show pre-filtered" overlay
     all_voltage_signals_raw = {
@@ -370,10 +388,10 @@ def _run_analysis(cfg_path: Path, system_frequency: float, display_filename: str
         name: signal_set.raw_signals.get(name, np.array([]))
         for name in current_names
     }
-    voltages_raw = _downsample_signal_dict(all_voltage_signals_raw, factor)
-    currents_raw = _downsample_signal_dict(all_current_signals_raw, factor)
-    rms_v = _downsample_signal_dict(all_rms_v, factor)
-    rms_i = _downsample_signal_dict(all_rms_i, factor)
+    voltages_raw = _downsample_signal_dict(all_voltage_signals_raw, target_count)
+    currents_raw = _downsample_signal_dict(all_current_signals_raw, target_count)
+    rms_v = _downsample_signal_dict(all_rms_v, target_count)
+    rms_i = _downsample_signal_dict(all_rms_i, target_count)
 
     phasors_v_all = {}
     for name in voltage_names:
@@ -482,7 +500,9 @@ def _run_analysis(cfg_path: Path, system_frequency: float, display_filename: str
     post_phasors = {}
     if len(voltage_names) >= 3 and len(time_s) > samples_per_cycle * 2:
         for name in voltage_names[:3]:
-            array = np.array(voltages[name], dtype=float)
+            array = np.asarray(all_voltage_signals.get(name, np.array([])), dtype=float)
+            if len(array) != len(time_s) or len(array) < samples_per_cycle:
+                continue
             pre = phasor_calculator.calculate_phasor(
                 array, time_s, time_s[0], time_s[samples_per_cycle - 1], name=name
             )

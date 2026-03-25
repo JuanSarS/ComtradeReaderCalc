@@ -5,6 +5,7 @@ All functions return a plotly.graph_objects.Figure.
 import numpy as np
 import plotly.graph_objects as go
 from typing import Dict, List, Optional
+from scipy.signal import savgol_filter
 
 # ─── colour palette (matches dark mockup) ───────────────────────────────────
 PHASE_COLORS = {"A": "#FF4B4B", "B": "#FFB800", "C": "#4B9EFF"}
@@ -13,6 +14,11 @@ GRID_COLOR   = "rgba(255,255,255,0.07)"
 BG_COLOR     = "#0d1117"
 PAPER_COLOR  = "#0d1117"
 FONT_COLOR   = "#e0e0e0"
+TIME_SERIES_SHAPE = "linear"
+TIME_SERIES_SMOOTHING = 0.0
+VISUAL_INTERP_FACTOR = 4
+VISUAL_MAX_POINTS = 9000
+VISUAL_SAVGOL_RATIO = 0.08
 
 _DARK_LAYOUT = dict(
     paper_bgcolor=PAPER_COLOR,
@@ -51,6 +57,55 @@ def _phase_color(channel_name: str, idx: int) -> str:
     return ["#FF4B4B", "#FFB800", "#4B9EFF", "#CC44FF", "#00FF88"][idx % 5]
 
 
+def _prepare_time_series_for_plot(
+    time_ms: List[float],
+    values: List[float],
+    smooth: bool = True,
+) -> tuple[list[float], list[float]]:
+    """Densify and smooth traces for display only (analysis values remain unchanged)."""
+    if not time_ms or not values:
+        return [], []
+
+    x = np.asarray(time_ms, dtype=float)
+    y = np.asarray(values, dtype=float)
+    n = min(len(x), len(y))
+    if n < 4:
+        return x[:n].tolist(), y[:n].tolist()
+
+    x = x[:n]
+    y = y[:n]
+
+    # Ensure monotonic x for interpolation.
+    order = np.argsort(x)
+    x = x[order]
+    y = y[order]
+    x_unique, uniq_idx = np.unique(x, return_index=True)
+    y_unique = y[uniq_idx]
+
+    if len(x_unique) < 4:
+        return x_unique.tolist(), y_unique.tolist()
+
+    target_n = min(VISUAL_MAX_POINTS, max(len(x_unique), len(x_unique) * VISUAL_INTERP_FACTOR))
+    if target_n > len(x_unique):
+        x_plot = np.linspace(float(x_unique[0]), float(x_unique[-1]), target_n)
+        y_plot = np.interp(x_plot, x_unique, y_unique)
+    else:
+        x_plot = x_unique
+        y_plot = y_unique
+
+    if smooth and len(y_plot) >= 9:
+        win = int(len(y_plot) * VISUAL_SAVGOL_RATIO)
+        if win % 2 == 0:
+            win += 1
+        win = max(11, win)
+        if win >= len(y_plot):
+            win = len(y_plot) - 1 if len(y_plot) % 2 == 0 else len(y_plot)
+        if win >= 5:
+            y_plot = savgol_filter(y_plot, window_length=win, polyorder=2, mode="interp")
+
+    return x_plot.tolist(), y_plot.tolist()
+
+
 # ─── instantaneous waveforms ────────────────────────────────────────────────
 
 def make_instantaneous_fig(
@@ -74,9 +129,13 @@ def make_instantaneous_fig(
     for idx, (name, vals) in enumerate(signals.items()):
         color = _phase_color(name, idx)
         label = f"Fase {name[-1].upper()}" if name else name
+        x_plot, y_plot = _prepare_time_series_for_plot(time_ms, vals, smooth=True)
         fig.add_trace(go.Scatter(
-            x=time_ms, y=vals, mode="lines", name=label,
-            line=dict(color=color, width=1.5),
+            x=x_plot, y=y_plot, mode="lines", name=label,
+            line=dict(color=color, width=2.0),
+            line_shape=TIME_SERIES_SHAPE,
+            line_smoothing=TIME_SERIES_SMOOTHING,
+            line_simplify=False,
             hovertemplate=f"{label}: %{{y:.1f}}<extra></extra>",
         ))
 
@@ -102,9 +161,13 @@ def make_instantaneous_fig(
         for idx, (name, vals) in enumerate(raw_signals.items()):
             color = _phase_color(name, idx)
             label = f"Fase {name[-1].upper()} (sin filtrar)" if name else f"{name} (sin filtrar)"
+            x_plot, y_plot = _prepare_time_series_for_plot(time_ms, vals, smooth=True)
             fig.add_trace(go.Scatter(
-                x=time_ms, y=vals, mode="lines", name=label,
-                line=dict(color=color, width=1.0, dash="dot"),
+                x=x_plot, y=y_plot, mode="lines", name=label,
+                line=dict(color=color, width=1.4, dash="dot"),
+                line_shape=TIME_SERIES_SHAPE,
+                line_smoothing=0.35,
+                line_simplify=False,
                 opacity=0.40,
                 hoverinfo="skip",
             ))
@@ -131,9 +194,13 @@ def make_rms_fig(
     for idx, (name, vals) in enumerate(rms_signals.items()):
         color = _phase_color(name, idx)
         label = f"Fase {name[-1].upper()}"
+        x_plot, y_plot = _prepare_time_series_for_plot(time_ms, vals, smooth=True)
         fig.add_trace(go.Scatter(
-            x=time_ms, y=vals, mode="lines", name=label,
+            x=x_plot, y=y_plot, mode="lines", name=label,
             line=dict(color=color, width=2),
+            line_shape=TIME_SERIES_SHAPE,
+            line_smoothing=0.35,
+            line_simplify=False,
         ))
     if cursor_ms is not None:
         fig.add_vline(
@@ -317,9 +384,13 @@ def make_sequence_waveform_fig(
             if not vals:
                 continue
             n = min(len(time_ms), len(vals))
+            x_plot, y_plot = _prepare_time_series_for_plot(time_ms[:n], vals[:n], smooth=True)
             fig.add_trace(go.Scatter(
-                x=time_ms[:n], y=vals[:n], mode="lines", name=label,
+                x=x_plot, y=y_plot, mode="lines", name=label,
                 line=dict(color=color, width=2.0),
+                line_shape=TIME_SERIES_SHAPE,
+                line_smoothing=0.35,
+                line_simplify=False,
             ))
     else:
         t = np.array(time_ms) / 1000.0
@@ -329,9 +400,13 @@ def make_sequence_waveform_fig(
             mag = ph["magnitude"] * np.sqrt(2)
             ang = np.radians(ph["angle_deg"])
             wave = mag * np.sin(omega * t + ang)
+            x_plot, y_plot = _prepare_time_series_for_plot(time_ms, wave.tolist(), smooth=True)
             fig.add_trace(go.Scatter(
-                x=time_ms, y=wave.tolist(), mode="lines", name=label,
+                x=x_plot, y=y_plot, mode="lines", name=label,
                 line=dict(color=color, width=1.8),
+                line_shape=TIME_SERIES_SHAPE,
+                line_smoothing=TIME_SERIES_SMOOTHING,
+                line_simplify=False,
             ))
     if cursor_ms is not None:
         fig.add_vline(
